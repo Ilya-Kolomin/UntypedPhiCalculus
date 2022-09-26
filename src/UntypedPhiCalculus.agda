@@ -2,9 +2,9 @@ module UntypedPhiCalculus where
 
 open import Data.Nat using (ℕ; zero; suc)
 open import Data.Empty using (⊥; ⊥-elim)
+open import Data.Sum using (_⊎_; inj₁; inj₂)
 
 infix 6 _,_
-infixr 5 _∪_
 infix 4 _∋_
 infix 4 _∣_⊢_
 
@@ -17,15 +17,8 @@ data Phi : Set where
 data ∅ : Set where
   void : ∅
 
-data _∪_ : Set → Set → Set where
-  first_  : {A B : Set}
-    → A
-    ---
-    → A ∪ B
-  second_ : {A B : Set}
-    → B
-    ---
-    → A ∪ B
+data None : Set where
+  empty : None
 
 data Parent : Set where
   none   : Parent
@@ -51,12 +44,12 @@ data _∣_⊢_ : Set → Parent → Type → Set where
   
   _∙_ : ∀ {L Γ}
     → L ∣ Γ ⊢ ★
-    → (L ∪ Phi)
+    → (L ⊎ Phi)
       -----------
     → L ∣ Γ ⊢ ★
   
   makeObject_ : ∀ {L Γ}
-    → ((L ∪ Phi) → (L ∣ (Γ , ★) ⊢ ★))
+    → ((L ⊎ Phi) → ((L ∣ (Γ , ★) ⊢ ★) ⊎ None ⊎ ∅))
       --------------------------------------
     → L ∣ Γ ⊢ ★
      
@@ -76,16 +69,22 @@ count {∅}     _        =  ⊥-elim impossible
 ρ_ : ∀ {L Γ} → ℕ → L ∣ Γ ⊢ ★
 ρ n  =  ` count n
 
+emptyObjImpl : ∀ {L Γ} → ((L ⊎ Phi) → ((L ∣ (Γ , ★) ⊢ ★) ⊎ None ⊎ ∅))
+emptyObjImpl _ = inj₂ (inj₁ empty)
+
+emptyObj : ∀ {L Γ} → L ∣ Γ ⊢ ★
+emptyObj = makeObject emptyObjImpl
+
 data ExampleLabel : Set where
   x : ExampleLabel
   y : ExampleLabel
   z : ExampleLabel
 
-exampleObjectImpl : ∀ {Γ} → ((ExampleLabel ∪ Phi) → (ExampleLabel ∣ (Γ , ★) ⊢ ★))
-exampleObjectImpl (first x) = ρ 0
-exampleObjectImpl (first y) = (ρ 0) ∙ (first x)
-exampleObjectImpl (first z) = (ρ 0) ∙ (first y)
-exampleObjectImpl (second φ) = ρ 0
+exampleObjectImpl : ∀ {Γ} → ((ExampleLabel ⊎ Phi) → ((ExampleLabel ∣ (Γ , ★) ⊢ ★) ⊎ None ⊎ ∅))
+exampleObjectImpl (inj₁ x) = inj₁ (ρ 0)
+exampleObjectImpl (inj₁ y) = inj₁ ((ρ 0) ∙ (inj₁ x))
+exampleObjectImpl (inj₁ z) = inj₁ emptyObj
+exampleObjectImpl (inj₂ φ) = inj₂ (inj₂ void)
 
 exampleObject : ∀ {Γ} → ExampleLabel ∣ Γ ⊢ ★
 exampleObject = makeObject exampleObjectImpl
