@@ -1,5 +1,6 @@
 module UntypedPhiCalculus where
 
+open import Relation.Binary.PropositionalEquality using (_≡_)
 open import Data.Nat using (ℕ; zero; suc)
 open import Data.Empty using (⊥; ⊥-elim)
 open import Data.Sum.Base using (_⊎_; inj₁; inj₂; [_,_]′)
@@ -8,6 +9,7 @@ infix 6 _,_
 infix 4 _∋_
 infix 4 _∣_⊢_
 infix 7 _[_↦_]
+infix 2 _⟿_
 
 data Type : Set where
   ★ : Type
@@ -138,3 +140,42 @@ subst-zero : ∀ {Γ B L} → (L ∣ Γ ⊢ B) → ∀ {A} → (Γ , B ∋ A) �
 subst-zero M Z      =  M
 subst-zero M (S a)  =  ` a
 
+_[_] : ∀ {L Γ A B}
+        → L ∣ Γ , B ⊢ A
+        → L ∣ Γ ⊢ B
+          ---------
+        → L ∣ Γ ⊢ A
+_[_] {L} {Γ} {A} {B} N M =  subst {Γ , B} {Γ} (subst-zero M) {A} N
+
+
+-- reduction
+
+data _⟿_ : ∀ {L Γ A} → (L ∣ Γ ⊢ A) → (L ∣ Γ ⊢ A) → Set where
+
+  congDOT : ∀ {L Γ} {M M′ : L ∣ Γ ⊢ ★} {l : L}
+    → M ⟿ M′
+      ----------------
+    → M ∙ (inj₁ l) ⟿ M′ ∙ (inj₁ l)
+
+  congAPP¹ : ∀ {L Γ} {N N′ M : L ∣ Γ ⊢ ★} {l : L}
+    → N ⟿ N′
+      ----------------
+    → N [ l ↦ M ] ⟿ N′ [ l ↦ M ]
+
+  congAPP² : ∀ {L Γ} {N M M′ : L ∣ Γ ⊢ ★} {l : L}
+    → M ⟿ M′
+      ----------------
+    → N [ l ↦ M ] ⟿ N [ l ↦ M′ ]
+
+  -- APP: ∀ {L Γ} {}
+
+  -- DOTc-ver1 : ∀ {L Γ} {t : L ∣ Γ ⊢ ★} {c : L} {t_c : t ∙ c} -- ? I think it is wrong
+  --     -----------
+  --   → t ∙ c ⟿ t_c [ t ]
+  
+  DOTc-ver2 : ∀ {L Γ c N t_c}
+      {t : L ∣ Γ ⊢ ★} 
+      {_ : t ≡ makeObject N}
+      {_ : N c ≡ inj₁ t_c}
+      ------------------------
+      → t ∙ c ⟿ t_c [ t ]
