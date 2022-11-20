@@ -5,11 +5,13 @@ open import Data.Nat using (ℕ; zero; suc)
 open import Data.Empty using (⊥; ⊥-elim)
 open import Data.Sum.Base using (_⊎_; inj₁; inj₂; [_,_]′)
 
-infix 6 _,_
+infixl 6 _,_
 infix 4 _∋_
 infix 4 _∣_⊢_
 infix 7 _[_↦_]
 infix 2 _⟿_
+infixl 4 _∙_
+
 
 data Type : Set where
   ★ : Type
@@ -82,11 +84,13 @@ data ExampleLabel : Set where
   x : ExampleLabel
   y : ExampleLabel
   z : ExampleLabel
+  w : ExampleLabel
 
 exampleObjectImpl : ∀ {Γ} → ((ExampleLabel ⊎ Phi) → ((ExampleLabel ∣ (Γ , ★) ⊢ ★) ⊎ None ⊎ ∅))
 exampleObjectImpl (inj₁ x) = inj₁ (ρ 0)
 exampleObjectImpl (inj₁ y) = inj₁ ((ρ 0) ∙ (inj₁ x))
 exampleObjectImpl (inj₁ z) = inj₁ emptyObj
+exampleObjectImpl (inj₁ w) = inj₁ emptyObj
 exampleObjectImpl (inj₂ φ) = inj₂ (inj₂ void)
 
 exampleObject : ∀ {Γ} → ExampleLabel ∣ Γ ⊢ ★
@@ -150,6 +154,17 @@ _[_] {L} {Γ} {A} {B} N M =  subst {Γ , B} {Γ} (subst-zero M) {A} N
 
 -- reduction
 
+app_helper : ∀ {L Γ} 
+  (N : (L ⊎ Phi) → ((L ∣ (Γ , ★) ⊢ ★) ⊎ None ⊎ ∅))
+  (c : L)
+  (u : L ∣ Γ , ★ ⊢ ★)
+  ------------
+  → ((L ⊎ Phi) → ((L ∣ (Γ , ★) ⊢ ★) ⊎ None ⊎ ∅))
+app_helper {L} {Γ} N c u = appN where
+  appN : (L ⊎ Phi) → ((L ∣ (Γ , ★) ⊢ ★) ⊎ None ⊎ ∅)
+  appN (inj₁ c) = inj₁ u
+  appN = N
+
 data _⟿_ : ∀ {L Γ A} → (L ∣ Γ ⊢ A) → (L ∣ Γ ⊢ A) → Set where
 
   congDOT : ∀ {L Γ} {M M′ : L ∣ Γ ⊢ ★} {l : L}
@@ -157,25 +172,107 @@ data _⟿_ : ∀ {L Γ A} → (L ∣ Γ ⊢ A) → (L ∣ Γ ⊢ A) → Set wher
       ----------------
     → M ∙ (inj₁ l) ⟿ M′ ∙ (inj₁ l)
 
-  congAPP¹ : ∀ {L Γ} {N N′ M : L ∣ Γ ⊢ ★} {l : L}
+  congAPP₁ : ∀ {L Γ} {N N′ M : L ∣ Γ ⊢ ★} {l : L}
     → N ⟿ N′
       ----------------
     → N [ l ↦ M ] ⟿ N′ [ l ↦ M ]
 
-  congAPP² : ∀ {L Γ} {N M M′ : L ∣ Γ ⊢ ★} {l : L}
+  congAPP₂ : ∀ {L Γ} {N M M′ : L ∣ Γ ⊢ ★} {l : L}
     → M ⟿ M′
       ----------------
     → N [ l ↦ M ] ⟿ N [ l ↦ M′ ]
-
-  -- APP: ∀ {L Γ} {}
-
-  -- DOTc-ver1 : ∀ {L Γ} {t : L ∣ Γ ⊢ ★} {c : L} {t_c : t ∙ c} -- ? I think it is wrong
-  --     -----------
-  --   → t ∙ c ⟿ t_c [ t ]
   
-  DOTc-ver2 : ∀ {L Γ c N t_c}
-      {t : L ∣ Γ ⊢ ★} 
-      {_ : t ≡ makeObject N}
-      {_ : N c ≡ inj₁ t_c}
-      ------------------------
-      → t ∙ c ⟿ t_c [ t ]
+  DOT : ∀ {L Γ c N t_c}
+    {t : L ∣ Γ ⊢ ★} 
+    {_ : t ≡ makeObject N}
+    {_ : N c ≡ inj₁ t_c}
+    ------------------------
+    → t ∙ c ⟿ t_c [ t ]
+
+  DOTφ : ∀ {L Γ c N t_φ} 
+    {t : L ∣ Γ ⊢ ★}
+    {_ : t ≡ makeObject N}
+    {_ : N (inj₁ c) ≡ inj₂ (inj₁ empty)}
+    {_ : N (inj₂ φ) ≡ inj₁ t_φ}
+    ----------------------
+    → t ∙ (inj₁ c) ⟿ t ∙ (inj₂ φ) ∙ (inj₁ c)
+  
+  APP : ∀ {L Γ c N}
+    {t : L ∣ Γ ⊢ ★}
+    {_ : t ≡ makeObject N}
+    {_ : N (inj₁ c) ≡ inj₂ (inj₂ void)}
+    {u : L ∣ Γ ⊢ ★}
+      -----------------------
+    → t [ c ↦ u ] ⟿ makeObject (app_helper N c (rename S_ u))
+
+
+infix  2 _⟿→_
+infix  1 begin_
+infixr 2 _⟿→⟨_⟩_
+infix  3 _∎
+
+data _⟿→_ : ∀ {L Γ A} → (L ∣ Γ ⊢ A) → (L ∣ Γ ⊢ A) → Set where
+
+  _∎ : ∀ {L Γ A} (M : L ∣ Γ ⊢ A)
+      --------
+    → M ⟿→ M
+
+  _⟿→⟨_⟩_ : ∀ {L Γ A} (K : L ∣ Γ ⊢ A) {M N : L ∣ Γ ⊢ A}
+    → K ⟿ M
+    → M ⟿→ N
+      ---------
+    → K ⟿→ N
+
+begin_ : ∀ {L} {Γ} {A} {M N : L ∣ Γ ⊢ A}
+  → M ⟿→ N
+    ------
+  → M ⟿→ N
+begin M⟿⋆N = M⟿⋆N
+
+leftPart : ExampleLabel ∣ none ⊢ ★
+leftPart = ((makeObject (\ { (inj₁ x) -> inj₁ (makeObject (\ {  (inj₁ y) -> inj₂ (inj₂ void) ; 
+                                                                (inj₁ x) -> inj₂ (inj₁ empty) ;
+                                                                (inj₁ z) -> inj₂ (inj₁ empty) ;
+                                                                (inj₁ w) -> inj₂ (inj₁ empty) ;
+                                                                (inj₂ φ) -> inj₂ (inj₁ empty)})) ; 
+                              (inj₁ y) -> inj₂ (inj₁ empty) ;
+                              (inj₁ z) -> inj₂ (inj₁ empty) ;
+                              (inj₁ w) -> inj₂ (inj₁ empty) ;
+                              (inj₂ φ) -> inj₂ (inj₁ empty)})) ∙ (inj₁ x))
+
+firstStep : ExampleLabel ∣ none ⊢ ★
+firstStep = leftPart [ y ↦ ((makeObject (\ {  (inj₁ z) -> (inj₁ emptyObj) ; -- empty object? in paper example there should be 'w', but it errors on something like (p 1)
+                                              (inj₁ x) -> inj₂ (inj₁ empty) ;
+                                              (inj₁ y) -> inj₂ (inj₁ empty) ;
+                                              (inj₁ w) -> inj₂ (inj₁ empty) ;
+                                              (inj₂ φ) -> inj₂ (inj₁ empty) })) ∙ (inj₁ z)) ]
+
+secondStep : ExampleLabel ∣ none ⊢ ★
+secondStep = leftPart [ y ↦ emptyObj ]
+
+thirdStep : ExampleLabel ∣ none ⊢ ★
+thirdStep = (makeObject (\ {  (inj₁ y) -> inj₂ (inj₂ void) ; 
+                              (inj₁ x) -> inj₂ (inj₁ empty) ;
+                              (inj₁ z) -> inj₂ (inj₁ empty) ;
+                              (inj₁ w) -> inj₂ (inj₁ empty) ;
+                              (inj₂ φ) -> inj₂ (inj₁ empty)})) [ y ↦ emptyObj ]
+
+fourthStep : ExampleLabel ∣ none ⊢ ★
+fourthStep = makeObject (\ {  (inj₁ y) -> inj₁ emptyObj ; 
+                              (inj₁ x) -> inj₂ (inj₁ empty) ;
+                              (inj₁ z) -> inj₂ (inj₁ empty) ;
+                              (inj₁ w) -> inj₂ (inj₁ empty) ;
+                              (inj₂ φ) -> inj₂ (inj₁ empty)})
+
+
+_ : firstStep ⟿→ fourthStep
+_ =
+  begin
+    firstStep
+  ⟿→⟨ congAPP₂ DOT ⟩
+    secondStep
+  ⟿→⟨ congAPP₁ DOT ⟩
+    thirdStep
+  ⟿→⟨ APP ⟩
+    fourthStep
+  ∎
