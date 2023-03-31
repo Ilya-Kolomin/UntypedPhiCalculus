@@ -64,7 +64,7 @@ We recommend installing this project from Github into your home directory, by ru
 git clone --depth 1 --recurse-submodules --shallow-submodules https://github.com/Ilya-Kolomin/UntypedPhiCalculus.git
 ```
 
-This implementation ships with the required version of the Agda standard library, so if you cloned with the `--recurse-submodules` flag, you’ve already got it, in the `standard-library` directory!
+This implementation ships with the required version of the Agda standard library, so if you cloned with the `--recurse-submodules` flag, you’ve already got it, in the `agda-stdlib` directory!
 
 Finally, we need to let Agda know where to find the Agda standard library. Two configuration files are required, one which lists paths to the libraries and one which specifies which libraries to load by default.
 
@@ -72,7 +72,7 @@ On macOS and Unix, if UntypedPhiCalculus is installed in your home directory and
 
 ```bash
 mkdir -p ~/.agda
-echo "$HOME/UntypedPhiCalculus/standard-library/standard-library.agda-lib" >> ~/.agda/libraries
+echo "$HOME/UntypedPhiCalculus/agda-stdlib/standard-library.agda-lib" >> ~/.agda/libraries
 echo "standard-library" >> ~/.agda/defaults
 ```
 
@@ -81,7 +81,7 @@ This provides access to the Agda standard library.
 Otherwise, you will need to edit the appropriate files. Both configuration files are located in the directory `AGDA_DIR`. On UNIX and macOS, `AGDA_DIR` defaults to `~/.agda`. On Windows, `AGDA_DIR` usually defaults to `%AppData%\agda`, where `%AppData%` usually defaults to `C:\Users\USERNAME\AppData\Roaming`.
 
 - If the `AGDA_DIR` directory does not already exist, create it.
-- In `AGDA_DIR`, create a plain-text file called `libraries` containing `AGDA_STDLIB/standard-library.agda-lib`, where `AGDA_STDLIB` is the path to where the Agda standard library is located (e.g., `~/UntypedPhiCalculus/standard-library/`). This lets Agda know that an Agda library called `standard-library` is available.
+- In `AGDA_DIR`, create a plain-text file called `libraries` containing `AGDA_STDLIB/standard-library.agda-lib`, where `AGDA_STDLIB` is the path to where the Agda standard library is located (e.g., `~/UntypedPhiCalculus/agda-stdlib/`). This lets Agda know that an Agda library called `standard-library` is available.
 - In `AGDA_DIR`, create a plain-text file called `defaults` containing _just_ the line `standard-library`.
 
 More information about placing the standard libraries is available from [the Library Management page][agda-readthedocs-package-system] of the Agda documentation.
