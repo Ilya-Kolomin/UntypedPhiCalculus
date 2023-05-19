@@ -267,7 +267,7 @@ singleSubstitution = _[_]
 
 \end{code}}
 
-\newcommand{\reductionImpl}{%
+\newcommand{\applyImpl}{%
 \begin{code}
 
 -- reduction
@@ -283,11 +283,18 @@ apply {L} {Γ} N c u comp attr with comp attr (inj₁ c)
 ... | yes _ = inj₁ u
 ... | no _ = N attr
 
+\end{code}}
+
+\newcommand{\reductionImpl}{%
+\begin{code}
+
 interleaved mutual
 
   data _⟿_ : ∀ {L Γ A} → (L ∣ Γ ⊢ A) → (L ∣ Γ ⊢ A) → Set
 
-  singleReductN : ∀ {L Γ} {t t' : L ∣ (Γ ,, ★) ⊢ ★} {comp : (a : L ⊎ Phi) → (b : L ⊎ Phi) → Dec (a ≡ b)} → (c : L ⊎ Phi)
+  singleReductN : ∀ {L Γ}
+    {t t' : L ∣ (Γ ,, ★) ⊢ ★}
+    {comp : (a : L ⊎ Phi) → (b : L ⊎ Phi) → Dec (a ≡ b)} → (c : L ⊎ Phi)
     → (N : (L ⊎ Phi) → ((L ∣ (Γ ,, ★) ⊢ ★) ⊎ None ⊎ ∅)) 
     → (N c ≡ inj₁ t) → t ⟿ t' 
     → ((L ⊎ Phi) → ((L ∣ (Γ ,, ★) ⊢ ★) ⊎ None ⊎ ∅))
@@ -337,8 +344,6 @@ interleaved mutual
       ----------------------
       → t ∙ (inj₁ c) ⟿ t ∙ (inj₂ φ) ∙ (inj₁ c)
 
-    
-    -- TODO: should not be rename S_,, but should define operator _↑
     APP : ∀ {L Γ c N}
       {t : L ∣ Γ ⊢ ★}
       {_ : t ≡ makeObject N}
@@ -379,7 +384,7 @@ begin M⟿→N = M⟿→N
 
 \end{code}}
 
-\newcommand{\reductionExample}{%
+\newcommand{\reductionExampleSupportingLemmas}{%
 \begin{code}
 
 -- Supporting lemmas
@@ -405,6 +410,10 @@ makeObjectEqualityLemma e rewrite e = _≡_.refl
   → (N ⟿ M′)
 ⟿FromEqualityLemma a e rewrite e = a
 
+\end{code}}
+
+\newcommand{\reductionExampleStepsDefinitions}{%
+\begin{code}
 
 -- Steps definitions
 
@@ -491,6 +500,11 @@ fourthStep_reductionExample : ExampleLabel ∣ none ⊢ ★
 fourthStep_reductionExample = makeObject fourthStepImpl_reductionExample
 
 
+\end{code}}
+
+\newcommand{\reductionExampleStepOneTwo}{%
+\begin{code}
+
 -- Reduction steps proofs
 
 -- firstStep ⟿ secondStep
@@ -510,8 +524,14 @@ firstToSecondStepLemma_reductionExample =
     {_≡_.refl} {_≡_.refl})
 
 
+\end{code}}
+
+\newcommand{\reductionExampleStepTwoThree}{%
+\begin{code}
+
 -- secondStep ⟿ thirdStep
--- [[ x ↦ [[ y ↦ ∅ ]] ]].x (y ↦ emptyObj) ⟿ [[ y ↦ ∅ ]] (y ↦ emptyObj)
+-- [[ x ↦ [[ y ↦ ∅ ]] ]].x (y ↦ emptyObj)
+--  ⟿ [[ y ↦ ∅ ]] (y ↦ emptyObj)
 -- Here we apply DOT and congAPP₁ rules
 -- LP means "Left Part"
 dotToSecondStepLPImpl≡ThirdStepLPImplLemma_reductionExample :
@@ -540,7 +560,8 @@ dotToSecondStepLP≡ThirdStepLemmaLP_reductionExample =
     {ExampleLabel}
     {none}
     {obtainN
-      (innerObjectLeftPart_reductionExample [ makeObject leftPartImpl_reductionExample ])
+      (innerObjectLeftPart_reductionExample
+        [ makeObject leftPartImpl_reductionExample ])
       _≡_.refl}
     {thirdStepImpl_reductionExample}
     dotToSecondStepLPImpl≡ThirdStepLPImplLemma_reductionExample
@@ -551,7 +572,8 @@ dotToSecondStep≡ThirdStepLemma_reductionExample :
   [ y ↦ emptyObj ]
   ≡ thirdStep_reductionExample
 dotToSecondStep≡ThirdStepLemma_reductionExample
-  rewrite dotToSecondStepLP≡ThirdStepLemmaLP_reductionExample = _≡_.refl
+  rewrite dotToSecondStepLP≡ThirdStepLemmaLP_reductionExample
+  = _≡_.refl
 
 secondStepToThirdStepLemma_reductionExample :
   secondStep_reductionExample ⟿ thirdStep_reductionExample
@@ -566,6 +588,11 @@ secondStepToThirdStepLemma_reductionExample =
       {_} {_≡_.refl} {_≡_.refl}))
     dotToSecondStep≡ThirdStepLemma_reductionExample
 
+
+\end{code}}
+
+\newcommand{\reductionExampleStepThreeFour}{%
+\begin{code}
 
 
 -- thirdStep ⟿ fourthStep
@@ -589,7 +616,8 @@ applyToThirdStep≡ForthStep2Lemma_reductionExample :
       (rename S_ emptyObj) exampleLabelComparator)
   ≡ fourthStep_reductionExample
 applyToThirdStep≡ForthStep2Lemma_reductionExample =
-  makeObjectEqualityLemma applyToThirdStep≡ForthStep1Lemma_reductionExample
+  makeObjectEqualityLemma
+    applyToThirdStep≡ForthStep1Lemma_reductionExample
 
 thirdToForthStepLemma_reductionExample :
   thirdStep_reductionExample ⟿ fourthStep_reductionExample
@@ -604,11 +632,19 @@ thirdToForthStepLemma_reductionExample = ⟿FromEqualityLemma
   applyToThirdStep≡ForthStep2Lemma_reductionExample
 
 
+\end{code}}
+
+\newcommand{\reductionExampleCompleteSequence}{%
+\begin{code}
+
 -- Actual reduction sequence example
 
--- [[ x ↦ [[ y ↦ ∅ ]] ]].x (y ↦ [[ z ↦ emptyObj ]].z) ⟿
--- [[ x ↦ [[ y ↦ ∅ ]] ]].x (y ↦ emptyObj) ⟿
--- [[ y ↦ ∅ ]] (y ↦ emptyObj) ⟿
+-- [[ x ↦ [[ y ↦ ∅ ]] ]].x (y ↦ [[ z ↦ emptyObj ]].z)
+-- ⟿
+-- [[ x ↦ [[ y ↦ ∅ ]] ]].x (y ↦ emptyObj)
+-- ⟿
+-- [[ y ↦ ∅ ]] (y ↦ emptyObj)
+-- ⟿
 -- [[ y ↦ emptyObj ]]
 reductionExample : firstStep_reductionExample ⟿* fourthStep_reductionExample
 reductionExample =
@@ -748,30 +784,30 @@ interleaved mutual
   -- ...   | inj₁ t_attr = t_attr , (⇛-reflexive t_attr)
   -- ...   | inj₂ v = tt
 
-  pseudoParRedEqSingleC : ∀ {L Γ c}
-    {N : (L ⊎ Phi) → ((L ∣ (Γ ,, ★) ⊢ ★) ⊎ None ⊎ ∅)}
-    {t_c t'' : L ∣ (Γ ,, ★) ⊢ ★}
-    {e : N c ≡ (inj₁ t_c)}
-    {red : t_c ⟿ t''}
-    {comp : (a : L ⊎ Phi) → (b : L ⊎ Phi) → Dec (a ≡ b)}
-    → (((parallelReductN N (parallelObjRedFromSingle {L} {Γ} {comp} N c t_c t'' e red)) c)
-      ≡ ((singleReductN {L} {Γ} {t_c} {t''} {comp} c N e red) c))
-  pseudoParRedEqSingleC  {L} {Γ} {c} {N} {t_c} {t''} {e} {red} {comp} with N c | (parallelObjRedFromSingle {L} {Γ} {comp} N c t_c t'' e red) c
-  -- ... | t1 , _ | inj₁ t2 = ?
-  ... | inj₁ t1 | t2 , _ with comp c c
-  ...   | yes e_c_c with c | e_c_c
-  ...     | c | _≡_.refl with N c | e
-  ...       | (inj₁ t3) | _≡_.refl = _≡_.refl
+  -- pseudoParRedEqSingleC : ∀ {L Γ c}
+  --   {N : (L ⊎ Phi) → ((L ∣ (Γ ,, ★) ⊢ ★) ⊎ None ⊎ ∅)}
+  --   {t_c t'' : L ∣ (Γ ,, ★) ⊢ ★}
+  --   {e : N c ≡ (inj₁ t_c)}
+  --   {red : t_c ⟿ t''}
+  --   {comp : (a : L ⊎ Phi) → (b : L ⊎ Phi) → Dec (a ≡ b)}
+  --   → (((parallelReductN N (parallelObjRedFromSingle {L} {Γ} {comp} N c t_c t'' e red)) c)
+  --     ≡ ((singleReductN {L} {Γ} {t_c} {t''} {comp} c N e red) c))
+  -- pseudoParRedEqSingleC  {L} {Γ} {c} {N} {t_c} {t''} {e} {red} {comp} with N c | (parallelObjRedFromSingle {L} {Γ} {comp} N c t_c t'' e red) c
+  -- -- ... | t1 , _ | inj₁ t2 = ?
+  -- ... | inj₁ t1 | t2 , _ with comp c c
+  -- ...   | yes e_c_c with c | e_c_c
+  -- ...     | c | _≡_.refl with N c | e
+  -- ...       | (inj₁ t3) | _≡_.refl = _≡_.refl
   -- ... | inj₁ t1 | t2 , _ with t1 | e
   -- ...   | t3 | _≡_.refl = ?
   -- ...   | yes e_c_c with N c | e
   -- ...     | (inj₁ t) | _≡_.refl = {!   !}
 
 
-  pseudoParRedEqSingleAttr : ∀ {L Γ c} {N : (L ⊎ Phi) → ((L ∣ (Γ ,, ★) ⊢ ★) ⊎ None ⊎ ∅)} {t_c t'' : L ∣ (Γ ,, ★) ⊢ ★} {e : N c ≡ (inj₁ t_c)} {red : t_c ⟿ t''} {comp : (a : L ⊎ Phi) → (b : L ⊎ Phi) → Dec (a ≡ b)} (attr : L ⊎ Phi) → (((parallelReductN N (parallelObjRedFromSingle {L} {Γ} {comp} N c t_c t'' e red)) attr) ≡ ((singleReductN {L} {Γ} {t_c} {t''} {comp} c N e red) attr))
+  -- pseudoParRedEqSingleAttr : ∀ {L Γ c} {N : (L ⊎ Phi) → ((L ∣ (Γ ,, ★) ⊢ ★) ⊎ None ⊎ ∅)} {t_c t'' : L ∣ (Γ ,, ★) ⊢ ★} {e : N c ≡ (inj₁ t_c)} {red : t_c ⟿ t''} {comp : (a : L ⊎ Phi) → (b : L ⊎ Phi) → Dec (a ≡ b)} (attr : L ⊎ Phi) → (((parallelReductN N (parallelObjRedFromSingle {L} {Γ} {comp} N c t_c t'' e red)) attr) ≡ ((singleReductN {L} {Γ} {t_c} {t''} {comp} c N e red) attr))
   -- pseudoParRedEqSingleAttr {L} {Γ} {c} {N} {t_c} {t''} {e} {red} {comp} attr with (comp attr c)
 
-  pseudoParRedEqSingleAttr {L} {Γ} {c} {N} {t_c} {t''} {e} {red} {comp} attr = {!   !}
+  -- pseudoParRedEqSingleAttr {L} {Γ} {c} {N} {t_c} {t''} {e} {red} {comp} attr = {!   !}
   -- ... | (Σ (L ∣ (Γ ,, ★) ⊢ ★) (_⇛_ t)) = {!   !}
 
 
@@ -792,8 +828,8 @@ interleaved mutual
   -- ...     | something | something2 with N c | e | something | something2
   -- ...       | _ | _ | _ | _ = {!   !}
 
-  pseudoParRedEqSingle : ∀ {L Γ c} {N : (L ⊎ Phi) → ((L ∣ (Γ ,, ★) ⊢ ★) ⊎ None ⊎ ∅)} {t_c t'' : L ∣ (Γ ,, ★) ⊢ ★} {e : N c ≡ (inj₁ t_c)} {red : t_c ⟿ t''} {comp : (a : L ⊎ Phi) → (b : L ⊎ Phi) → Dec (a ≡ b)} → (parallelReductN N (parallelObjRedFromSingle {L} {Γ} {comp} N c t_c t'' e red)) ≡ (singleReductN {L} {Γ} {t_c} {t''} {comp} c N e red)
-  pseudoParRedEqSingle {L} {Γ} {c} {N} {t_c} {t''} {e} {red} {comp} = φ-extensionality (parallelReductN N (parallelObjRedFromSingle {L} {Γ} {comp} N c t_c t'' e red)) (singleReductN {L} {Γ} {t_c} {t''} {comp} c N e red) pseudoParRedEqSingleAttr -- where
+  -- pseudoParRedEqSingle : ∀ {L Γ c} {N : (L ⊎ Phi) → ((L ∣ (Γ ,, ★) ⊢ ★) ⊎ None ⊎ ∅)} {t_c t'' : L ∣ (Γ ,, ★) ⊢ ★} {e : N c ≡ (inj₁ t_c)} {red : t_c ⟿ t''} {comp : (a : L ⊎ Phi) → (b : L ⊎ Phi) → Dec (a ≡ b)} → (parallelReductN N (parallelObjRedFromSingle {L} {Γ} {comp} N c t_c t'' e red)) ≡ (singleReductN {L} {Γ} {t_c} {t''} {comp} c N e red)
+  -- pseudoParRedEqSingle {L} {Γ} {c} {N} {t_c} {t''} {e} {red} {comp} = φ-extensionality (parallelReductN N (parallelObjRedFromSingle {L} {Γ} {comp} N c t_c t'' e red)) (singleReductN {L} {Γ} {t_c} {t''} {comp} c N e red) pseudoParRedEqSingleAttr -- where
     -- eqAttr : (attr : L ⊎ Phi) → (((parallelReductN N (parallelObjRedFromSingle {L} {Γ} {comp} N c t_c t'' e red)) attr) ≡ ((singleReductN {L} {Γ} {t_c} {t''} {comp} c N e red) attr))
     -- eqAttr attr with (comp attr c)
     -- eqAttr attr with (comp attr c) | N attr | (parallelObjRedFromSingle {L} {Γ} {comp} N c t_c t'' e red) attr | (parallelReductN N (parallelObjRedFromSingle {L} {Γ} {comp} N c t_c t'' e red)) attr
@@ -810,14 +846,14 @@ interleaved mutual
     -- ...   | c | _≡_.refl with (parallelReductN N (parallelObjRedFromSingle {L} {Γ} {comp} N c t_c t'' e red)) c
     -- ...     | (inj₁ t) = {!   !}
 
-  singleReductionImpliesParallel {L} {Γ} {★} {t} {t'} red with red
-  ... | DOT {L} {Γ} {c} {N} {t_c} {t} {e1} {e2} = DOT⇛ {L} {Γ} {c} {N} {t_c} {t} {t} {e1} {e2} (⇛-reflexive t)
-  ... | congDOT {L} {Γ} {_} {_} {l} r = cong⇛DOT (singleReductionImpliesParallel r)
-  ... | congAPP₁ {L} {Γ} {_} {_} {M} r = cong⇛APP (singleReductionImpliesParallel r) (⇛-reflexive M)
-  ... | congAPP₂ {L} {Γ} {N} {_} {_} r = cong⇛APP (⇛-reflexive N) (singleReductionImpliesParallel r)
-  ... | DOTφ {L} {Γ} {c} {N} {t_φ} {t} {e1} {e2} {e3} = DOT⇛φ {L} {Γ} {c} {N} {t_φ} {t} {t} {e1} {e2} {e3} (⇛-reflexive t)
-  ... | APP {L} {Γ} {c} {N} {t'} {e1} {e2} {u} comp = APP⇛ {L} {Γ} {c} {N} {t'} {t'} {e1} {e2} {u} {comp} (⇛-reflexive t')
-  ... | congOBJ {L} {Γ} {c} {N} {t_c} {t} {t''} {e1} {e2} {comp} r = {!   !}
+  -- singleReductionImpliesParallel {L} {Γ} {★} {t} {t'} red with red
+  -- ... | DOT {L} {Γ} {c} {N} {t_c} {t} {e1} {e2} = DOT⇛ {L} {Γ} {c} {N} {t_c} {t} {t} {e1} {e2} (⇛-reflexive t)
+  -- ... | congDOT {L} {Γ} {_} {_} {l} r = cong⇛DOT (singleReductionImpliesParallel r)
+  -- ... | congAPP₁ {L} {Γ} {_} {_} {M} r = cong⇛APP (singleReductionImpliesParallel r) (⇛-reflexive M)
+  -- ... | congAPP₂ {L} {Γ} {N} {_} {_} r = cong⇛APP (⇛-reflexive N) (singleReductionImpliesParallel r)
+  -- ... | DOTφ {L} {Γ} {c} {N} {t_φ} {t} {e1} {e2} {e3} = DOT⇛φ {L} {Γ} {c} {N} {t_φ} {t} {t} {e1} {e2} {e3} (⇛-reflexive t)
+  -- ... | APP {L} {Γ} {c} {N} {t'} {e1} {e2} {u} comp = APP⇛ {L} {Γ} {c} {N} {t'} {t'} {e1} {e2} {u} {comp} (⇛-reflexive t')
+  -- ... | congOBJ {L} {Γ} {c} {N} {t_c} {t} {t''} {e1} {e2} {comp} r = {!   !}
 
   -- singleReductionImpliesParallel {L} {Γ} {★} {makeObject N} {t'} (congOBJ {L} {Γ} {c} {_} {t_c} {t} {t''} {_} {_} {comp} red) = congOBJ⇛ {L} {Γ} {N} {makeObject N} {_≡_.refl} (parallelObjRedFromSingle {L} {Γ} {comp} N c t_c t'' _ red)
   -- singleReductionImpliesParallel {L} {Γ} {★} {t ∙ (inj₁ l)} {t' ∙ (inj₁ l)} (congDOT {L} {Γ} {t} {t'} {l} red) = cong⇛DOT (singleReductionImpliesParallel red)
