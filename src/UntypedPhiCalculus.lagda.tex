@@ -25,6 +25,15 @@ infix 7 _[_↦_]
 infix 2 _⟿_
 infixl 4 _∙_
 infix 2 _⇛_
+infix  2 _⟿*_
+infix  1 begin_
+infix  1 begin⇛_
+infixr 2 _⟿⟨_⟩_
+infixr 2 _⟿*⟨_⟩_
+infix  3 _∎
+infix  2 _⇛*_
+infixr 2 _⇛⟨_⟩_
+infixr 2 _⇛*⟨_⟩_
 
 \end{code}}
 
@@ -92,17 +101,6 @@ data _∣_⊢_ : Set → Parent → Type → Set where
     → L ∣ Γ ⊢ ★
       ------------
     → L ∣ Γ ⊢ ★
-
-attached_ : ∀ {L Γ} → (t : L ∣ Γ ⊢ ★) → ((L ∣ Γ ⊢ ★) ⊎ None ⊎ ∅)
-attached_ = inj₁
-
-missing_ : ∀ {L Γ} → (v : None) → ((L ∣ Γ ⊢ ★) ⊎ None ⊎ ∅)
-missing v = inj₂ (inj₁ v)
-
-void_ : ∀ {L Γ} → (v : ∅) → ((L ∣ Γ ⊢ ★) ⊎ None ⊎ ∅)
-void v = inj₂ (inj₂ v)
-
-
 
 \end{code}}
 
@@ -357,12 +355,6 @@ interleaved mutual
 
 \newcommand{\reductionSequence}{%
 \begin{code}
-  
-
-infix  2 _⟿*_
-infix  1 begin_
-infixr 2 _⟿→⟨_⟩_
-infix  3 _∎
 
 data _⟿*_ : ∀ {L Γ A} → (L ∣ Γ ⊢ A) → (L ∣ Γ ⊢ A) → Set where
 
@@ -370,7 +362,7 @@ data _⟿*_ : ∀ {L Γ A} → (L ∣ Γ ⊢ A) → (L ∣ Γ ⊢ A) → Set whe
       --------
     → M ⟿* M
 
-  _⟿→⟨_⟩_ : ∀ {L Γ A} (K : L ∣ Γ ⊢ A) {M N : L ∣ Γ ⊢ A}
+  _⟿⟨_⟩_ : ∀ {L Γ A} (K : L ∣ Γ ⊢ A) {M N : L ∣ Γ ⊢ A}
     → K ⟿ M
     → M ⟿* N
       ---------
@@ -380,7 +372,26 @@ begin_ : ∀ {L} {Γ} {A} {M N : L ∣ Γ ⊢ A}
   → M ⟿* N
     ------
   → M ⟿* N
-begin M⟿→N = M⟿→N
+begin M⟿*N = M⟿*N
+
+\end{code}}
+
+\newcommand{\reductionSequenceTrans}{%
+\begin{code}
+
+⟿*-trans : ∀ {L Γ A} {K M N : L ∣ Γ ⊢ A}
+         → K ⟿* M
+         → M ⟿* N
+         → K ⟿* N
+⟿*-trans (M ∎) mn = mn
+⟿*-trans (K ⟿⟨ r ⟩ lm) mn = K ⟿⟨ r ⟩ (⟿*-trans lm mn)
+
+_⟿*⟨_⟩_ : ∀ {L Γ A} (K : L ∣ Γ ⊢ A) {M N : L ∣ Γ ⊢ A}
+    → K ⟿* M
+    → M ⟿* N
+      ---------
+    → K ⟿* N
+K ⟿*⟨ K⟿*M ⟩ M⟿*N = ⟿*-trans K⟿*M M⟿*N
 
 \end{code}}
 
@@ -418,61 +429,61 @@ makeObjectEqualityLemma e rewrite e = _≡_.refl
 -- Steps definitions
 
 -- [[ y ↦ ∅ ]]
-innerObjectLeftPartImpl_reductionExample : 
+innerObjectLeftPartImpl-reductionExample : 
   ((ExampleLabel ⊎ Phi) → ((ExampleLabel ∣ (none ,, ★ ,, ★) ⊢ ★) ⊎ None ⊎ ∅))
-innerObjectLeftPartImpl_reductionExample = \ {
+innerObjectLeftPartImpl-reductionExample = \ {
       (inj₁ y) -> inj₂ (inj₂ void) ; 
       (inj₁ x) -> inj₂ (inj₁ empty) ;
       (inj₁ z) -> inj₂ (inj₁ empty) ;
       (inj₁ w) -> inj₂ (inj₁ empty) ;
       (inj₂ φ) -> inj₂ (inj₁ empty) }
 
-innerObjectLeftPart_reductionExample : ExampleLabel ∣ (none ,, ★) ⊢ ★
-innerObjectLeftPart_reductionExample = 
-  makeObject innerObjectLeftPartImpl_reductionExample
+innerObjectLeftPart-reductionExample : ExampleLabel ∣ (none ,, ★) ⊢ ★
+innerObjectLeftPart-reductionExample = 
+  makeObject innerObjectLeftPartImpl-reductionExample
 
 -- [[ x ↦ [[ y ↦ ∅ ]] ]]
-leftPartImpl_reductionExample : 
+leftPartImpl-reductionExample : 
   ((ExampleLabel ⊎ Phi) → ((ExampleLabel ∣ (none ,, ★) ⊢ ★) ⊎ None ⊎ ∅))
-leftPartImpl_reductionExample = \{
-  (inj₁ x) -> inj₁ (innerObjectLeftPart_reductionExample) ; 
+leftPartImpl-reductionExample = \{
+  (inj₁ x) -> inj₁ (innerObjectLeftPart-reductionExample) ; 
   (inj₁ y) -> inj₂ (inj₁ empty) ;
   (inj₁ z) -> inj₂ (inj₁ empty) ;
   (inj₁ w) -> inj₂ (inj₁ empty) ;
   (inj₂ φ) -> inj₂ (inj₁ empty)}
 
 -- [[ x ↦ [[ y ↦ ∅ ]] ]].x
-leftPart_reductionExample : ExampleLabel ∣ none ⊢ ★
-leftPart_reductionExample =
-  (makeObject leftPartImpl_reductionExample) ∙ (inj₁ x)
+leftPart-reductionExample : ExampleLabel ∣ none ⊢ ★
+leftPart-reductionExample =
+  (makeObject leftPartImpl-reductionExample) ∙ (inj₁ x)
 
 -- emptyObj = [[]]
 -- [[ z ↦ emptyObj ]]
-innerObjectImpl_reductionExample :
+innerObjectImpl-reductionExample :
   ((ExampleLabel ⊎ Phi) → ((ExampleLabel ∣ (none ,, ★) ⊢ ★) ⊎ None ⊎ ∅))
-innerObjectImpl_reductionExample = \ {  
+innerObjectImpl-reductionExample = \ {  
   (inj₁ z) -> (inj₁ emptyObj) ;
   (inj₁ x) -> inj₂ (inj₁ empty) ;
   (inj₁ y) -> inj₂ (inj₁ empty) ;
   (inj₁ w) -> inj₂ (inj₁ empty) ;
   (inj₂ φ) -> inj₂ (inj₁ empty) }
 
-innerObject_reductionExample : ExampleLabel ∣ none ⊢ ★
-innerObject_reductionExample = makeObject innerObjectImpl_reductionExample
+innerObject-reductionExample : ExampleLabel ∣ none ⊢ ★
+innerObject-reductionExample = makeObject innerObjectImpl-reductionExample
 
 -- [[ x ↦ [[ y ↦ ∅ ]] ]].x (y ↦ [[ z ↦ emptyObj ]].z)
-firstStep_reductionExample : ExampleLabel ∣ none ⊢ ★
-firstStep_reductionExample =
-  leftPart_reductionExample [ y ↦ (innerObject_reductionExample ∙ (inj₁ z)) ]
+firstStep-reductionExample : ExampleLabel ∣ none ⊢ ★
+firstStep-reductionExample =
+  leftPart-reductionExample [ y ↦ (innerObject-reductionExample ∙ (inj₁ z)) ]
 
 -- [[ x ↦ [[ y ↦ ∅ ]] ]].x (y ↦ emptyObj)
-secondStep_reductionExample : ExampleLabel ∣ none ⊢ ★
-secondStep_reductionExample = leftPart_reductionExample [ y ↦ emptyObj ]
+secondStep-reductionExample : ExampleLabel ∣ none ⊢ ★
+secondStep-reductionExample = leftPart-reductionExample [ y ↦ emptyObj ]
 
 -- [[ y ↦ ∅ ]]
-thirdStepImpl_reductionExample :
+thirdStepImpl-reductionExample :
   ((ExampleLabel ⊎ Phi) → ((ExampleLabel ∣ (none ,, ★) ⊢ ★) ⊎ None ⊎ ∅))
-thirdStepImpl_reductionExample = \ {  
+thirdStepImpl-reductionExample = \ {  
   (inj₁ y) -> inj₂ (inj₂ void) ; 
   (inj₁ x) -> inj₂ (inj₁ empty) ;
   (inj₁ z) -> inj₂ (inj₁ empty) ;
@@ -480,15 +491,15 @@ thirdStepImpl_reductionExample = \ {
   (inj₂ φ) -> inj₂ (inj₁ empty) }
 
 -- [[ y ↦ ∅ ]] (y ↦ emptyObj)
-thirdStep_reductionExample : ExampleLabel ∣ none ⊢ ★
-thirdStep_reductionExample =
-  (makeObject thirdStepImpl_reductionExample) [ y ↦ emptyObj ]
+thirdStep-reductionExample : ExampleLabel ∣ none ⊢ ★
+thirdStep-reductionExample =
+  (makeObject thirdStepImpl-reductionExample) [ y ↦ emptyObj ]
 
 
 -- [[ y ↦ emptyObj ]]
-fourthStepImpl_reductionExample :
+fourthStepImpl-reductionExample :
   ((ExampleLabel ⊎ Phi) → ((ExampleLabel ∣ (none ,, ★) ⊢ ★) ⊎ None ⊎ ∅))
-fourthStepImpl_reductionExample = \ {  
+fourthStepImpl-reductionExample = \ {  
   (inj₁ y) -> inj₁ emptyObj ; 
   (inj₁ x) -> inj₂ (inj₁ empty) ;
   (inj₁ z) -> inj₂ (inj₁ empty) ;
@@ -496,8 +507,8 @@ fourthStepImpl_reductionExample = \ {
   (inj₂ φ) -> inj₂ (inj₁ empty) }
 
 -- [[ y ↦ emptyObj ]]
-fourthStep_reductionExample : ExampleLabel ∣ none ⊢ ★
-fourthStep_reductionExample = makeObject fourthStepImpl_reductionExample
+fourthStep-reductionExample : ExampleLabel ∣ none ⊢ ★
+fourthStep-reductionExample = makeObject fourthStepImpl-reductionExample
 
 
 \end{code}}
@@ -511,16 +522,16 @@ fourthStep_reductionExample = makeObject fourthStepImpl_reductionExample
 -- [[ x ↦ [[ y ↦ ∅ ]] ]].x (y ↦ [[ z ↦ emptyObj ]].z)
 --  ⟿ [[ x ↦ [[ y ↦ ∅ ]] ]].x (y ↦ emptyObj)
 -- Here we apply DOT and congAPP₂ rules
-firstToSecondStepLemma_reductionExample :
-  firstStep_reductionExample ⟿ secondStep_reductionExample
-firstToSecondStepLemma_reductionExample =
+firstToSecondStepLemma-reductionExample :
+  firstStep-reductionExample ⟿ secondStep-reductionExample
+firstToSecondStepLemma-reductionExample =
   congAPP₂ (DOT 
     {ExampleLabel}
     {none}
     {inj₁ z}
-    {innerObjectImpl_reductionExample}
+    {innerObjectImpl-reductionExample}
     {emptyObj}
-    {innerObject_reductionExample}
+    {innerObject-reductionExample}
     {_≡_.refl} {_≡_.refl})
 
 
@@ -534,16 +545,16 @@ firstToSecondStepLemma_reductionExample =
 --  ⟿ [[ y ↦ ∅ ]] (y ↦ emptyObj)
 -- Here we apply DOT and congAPP₁ rules
 -- LP means "Left Part"
-dotToSecondStepLPImpl≡ThirdStepLPImplLemma_reductionExample :
-  obtainN ( innerObjectLeftPart_reductionExample 
-    [ makeObject leftPartImpl_reductionExample ])
-  _≡_.refl ≡ thirdStepImpl_reductionExample
-dotToSecondStepLPImpl≡ThirdStepLPImplLemma_reductionExample =
-  φ-extensionality _ thirdStepImpl_reductionExample eqAttr where
+dotToSecondStepLPImpl≡ThirdStepLPImplLemma-reductionExample :
+  obtainN ( innerObjectLeftPart-reductionExample 
+    [ makeObject leftPartImpl-reductionExample ])
+  _≡_.refl ≡ thirdStepImpl-reductionExample
+dotToSecondStepLPImpl≡ThirdStepLPImplLemma-reductionExample =
+  φ-extensionality _ thirdStepImpl-reductionExample eqAttr where
     eqAttr : (attr : ExampleLabel ⊎ Phi)
-      → obtainN (innerObjectLeftPart_reductionExample
-        [ makeObject leftPartImpl_reductionExample ])
-      _≡_.refl attr ≡ thirdStepImpl_reductionExample attr
+      → obtainN (innerObjectLeftPart-reductionExample
+        [ makeObject leftPartImpl-reductionExample ])
+      _≡_.refl attr ≡ thirdStepImpl-reductionExample attr
     eqAttr attr with attr
     ... | inj₁ x = _≡_.refl
     ... | inj₁ y = _≡_.refl
@@ -551,42 +562,42 @@ dotToSecondStepLPImpl≡ThirdStepLPImplLemma_reductionExample =
     ... | inj₁ w = _≡_.refl
     ... | inj₂ φ = _≡_.refl
 
-dotToSecondStepLP≡ThirdStepLemmaLP_reductionExample :
-  (innerObjectLeftPart_reductionExample
-    [ makeObject leftPartImpl_reductionExample ])
-  ≡ (makeObject thirdStepImpl_reductionExample)
-dotToSecondStepLP≡ThirdStepLemmaLP_reductionExample =
+dotToSecondStepLP≡ThirdStepLemmaLP-reductionExample :
+  (innerObjectLeftPart-reductionExample
+    [ makeObject leftPartImpl-reductionExample ])
+  ≡ (makeObject thirdStepImpl-reductionExample)
+dotToSecondStepLP≡ThirdStepLemmaLP-reductionExample =
   makeObjectEqualityLemma
     {ExampleLabel}
     {none}
     {obtainN
-      (innerObjectLeftPart_reductionExample
-        [ makeObject leftPartImpl_reductionExample ])
+      (innerObjectLeftPart-reductionExample
+        [ makeObject leftPartImpl-reductionExample ])
       _≡_.refl}
-    {thirdStepImpl_reductionExample}
-    dotToSecondStepLPImpl≡ThirdStepLPImplLemma_reductionExample
+    {thirdStepImpl-reductionExample}
+    dotToSecondStepLPImpl≡ThirdStepLPImplLemma-reductionExample
 
-dotToSecondStep≡ThirdStepLemma_reductionExample :
-  (innerObjectLeftPart_reductionExample
-    [ makeObject leftPartImpl_reductionExample ])
+dotToSecondStep≡ThirdStepLemma-reductionExample :
+  (innerObjectLeftPart-reductionExample
+    [ makeObject leftPartImpl-reductionExample ])
   [ y ↦ emptyObj ]
-  ≡ thirdStep_reductionExample
-dotToSecondStep≡ThirdStepLemma_reductionExample
-  rewrite dotToSecondStepLP≡ThirdStepLemmaLP_reductionExample
+  ≡ thirdStep-reductionExample
+dotToSecondStep≡ThirdStepLemma-reductionExample
+  rewrite dotToSecondStepLP≡ThirdStepLemmaLP-reductionExample
   = _≡_.refl
 
-secondStepToThirdStepLemma_reductionExample :
-  secondStep_reductionExample ⟿ thirdStep_reductionExample
-secondStepToThirdStepLemma_reductionExample =
+secondStepToThirdStepLemma-reductionExample :
+  secondStep-reductionExample ⟿ thirdStep-reductionExample
+secondStepToThirdStepLemma-reductionExample =
   ⟿FromEqualityLemma (congAPP₁
     (DOT
       {ExampleLabel}
       {none}
       {inj₁ x}
-      {leftPartImpl_reductionExample}
-      {innerObjectLeftPart_reductionExample}
+      {leftPartImpl-reductionExample}
+      {innerObjectLeftPart-reductionExample}
       {_} {_≡_.refl} {_≡_.refl}))
-    dotToSecondStep≡ThirdStepLemma_reductionExample
+    dotToSecondStep≡ThirdStepLemma-reductionExample
 
 
 \end{code}}
@@ -598,38 +609,38 @@ secondStepToThirdStepLemma_reductionExample =
 -- thirdStep ⟿ fourthStep
 -- [[ y ↦ ∅ ]] (y ↦ emptyObj) ⟿ [[ y ↦ emptyObj ]]
 -- Here we apply APP rule
-applyToThirdStep≡ForthStep1Lemma_reductionExample :
-  (apply thirdStepImpl_reductionExample y
+applyToThirdStep≡ForthStep1Lemma-reductionExample :
+  (apply thirdStepImpl-reductionExample y
     (rename S_ emptyObj) exampleLabelComparator)
-  ≡ fourthStepImpl_reductionExample
-applyToThirdStep≡ForthStep1Lemma_reductionExample =
-  (φ-extensionality _ fourthStepImpl_reductionExample \ {
+  ≡ fourthStepImpl-reductionExample
+applyToThirdStep≡ForthStep1Lemma-reductionExample =
+  (φ-extensionality _ fourthStepImpl-reductionExample \ {
     (inj₁ x) → _≡_.refl ;
     (inj₁ y) → _≡_.refl ;
     (inj₁ z) → _≡_.refl ;
     (inj₁ w) → _≡_.refl ;
     (inj₂ φ) → _≡_.refl })
 
-applyToThirdStep≡ForthStep2Lemma_reductionExample :
+applyToThirdStep≡ForthStep2Lemma-reductionExample :
   makeObject
-    (apply thirdStepImpl_reductionExample y
+    (apply thirdStepImpl-reductionExample y
       (rename S_ emptyObj) exampleLabelComparator)
-  ≡ fourthStep_reductionExample
-applyToThirdStep≡ForthStep2Lemma_reductionExample =
+  ≡ fourthStep-reductionExample
+applyToThirdStep≡ForthStep2Lemma-reductionExample =
   makeObjectEqualityLemma
-    applyToThirdStep≡ForthStep1Lemma_reductionExample
+    applyToThirdStep≡ForthStep1Lemma-reductionExample
 
-thirdToForthStepLemma_reductionExample :
-  thirdStep_reductionExample ⟿ fourthStep_reductionExample
-thirdToForthStepLemma_reductionExample = ⟿FromEqualityLemma 
+thirdToForthStepLemma-reductionExample :
+  thirdStep-reductionExample ⟿ fourthStep-reductionExample
+thirdToForthStepLemma-reductionExample = ⟿FromEqualityLemma 
   (APP 
     {ExampleLabel} 
     {_} {y} 
-    {thirdStepImpl_reductionExample} 
+    {thirdStepImpl-reductionExample} 
     {_} {_≡_.refl} {_≡_.refl} 
     {emptyObj} 
     exampleLabelComparator)
-  applyToThirdStep≡ForthStep2Lemma_reductionExample
+  applyToThirdStep≡ForthStep2Lemma-reductionExample
 
 
 \end{code}}
@@ -646,21 +657,21 @@ thirdToForthStepLemma_reductionExample = ⟿FromEqualityLemma
 -- [[ y ↦ ∅ ]] (y ↦ emptyObj)
 -- ⟿
 -- [[ y ↦ emptyObj ]]
-reductionExample : firstStep_reductionExample ⟿* fourthStep_reductionExample
+reductionExample : firstStep-reductionExample ⟿* fourthStep-reductionExample
 reductionExample =
   begin
-    firstStep_reductionExample
-  ⟿→⟨ firstToSecondStepLemma_reductionExample ⟩
-    secondStep_reductionExample
-  ⟿→⟨ secondStepToThirdStepLemma_reductionExample ⟩
-    thirdStep_reductionExample
-  ⟿→⟨ thirdToForthStepLemma_reductionExample ⟩
-    fourthStep_reductionExample
+    firstStep-reductionExample
+  ⟿⟨ firstToSecondStepLemma-reductionExample ⟩
+    secondStep-reductionExample
+  ⟿⟨ secondStepToThirdStepLemma-reductionExample ⟩
+    thirdStep-reductionExample
+  ⟿⟨ thirdToForthStepLemma-reductionExample ⟩
+    fourthStep-reductionExample
   ∎
 
 \end{code}}
 
-\newcommand{\remainingImpl}{%
+\newcommand{\parallelLemmas}{%
 \begin{code}
 
 -- parallel reduction
@@ -690,6 +701,15 @@ interleaved mutual
     → (parallelReductN N reductionMaps) c ≡  inj₁ (reductionMaps c)
   decomposeParallelReductLemma
     {L} {Γ} {c} {t} {N} {reductionMaps} e rewrite e = _≡_.refl
+
+  ⇛FromEqualityLemma :
+    ∀ {L Γ} {N M M′ : L ∣ Γ ⊢ ★} → (N ⇛ M) → (M ≡ M′) → (N ⇛ M′)
+  ⇛FromEqualityLemma a e rewrite e = a
+
+\end{code}}
+
+\newcommand{\parallelReduction}{%
+\begin{code}
 
   data _⇛_ where
 
@@ -744,9 +764,47 @@ interleaved mutual
       -----------------------------
       → t ⇛ makeObject (parallelReductN N reductionMaps)
 
-⇛FromEqualityLemma :
-  ∀ {L Γ} {N M M′ : L ∣ Γ ⊢ ★} → (N ⇛ M) → (M ≡ M′) → (N ⇛ M′)
-⇛FromEqualityLemma a e rewrite e = a
+\end{code}}
+
+\newcommand{\parallelTrans}{%
+\begin{code}
+
+data _⇛*_ : ∀ {L Γ A} → (L ∣ Γ ⊢ A) → (L ∣ Γ ⊢ A) → Set where
+
+  _∎ : ∀ {L Γ A} (M : L ∣ Γ ⊢ A)
+      --------
+    → M ⇛* M
+
+  _⇛⟨_⟩_ : ∀ {L Γ A} (K : L ∣ Γ ⊢ A) {M N : L ∣ Γ ⊢ A}
+    → K ⇛ M
+    → M ⇛* N
+      ---------
+    → K ⇛* N
+
+begin⇛_ : ∀ {L} {Γ} {A} {M N : L ∣ Γ ⊢ A}
+  → M ⇛* N
+    ------
+  → M ⇛* N
+begin⇛ M⇛*N = M⇛*N
+
+⇛*-trans : ∀ {L Γ A} {K M N : L ∣ Γ ⊢ A}
+         → K ⇛* M
+         → M ⇛* N
+         → K ⇛* N
+⇛*-trans (M ∎) mn = mn
+⇛*-trans (K ⇛⟨ r ⟩ lm) mn = K ⇛⟨ r ⟩ (⇛*-trans lm mn)
+
+_⇛*⟨_⟩_ : ∀ {L Γ A} (K : L ∣ Γ ⊢ A) {M N : L ∣ Γ ⊢ A}
+    → K ⇛* M
+    → M ⇛* N
+      ---------
+    → K ⇛* N
+K ⇛*⟨ K⇛*M ⟩ M⇛*N = ⇛*-trans K⇛*M M⇛*N
+
+\end{code}}
+
+\newcommand{\parallelReflMap}{%
+\begin{code}
 
 interleaved mutual
 
@@ -758,6 +816,11 @@ interleaved mutual
   reductToSelfMap N c with N c
   ... | (inj₁ t) = t
   ... | (inj₂ _) = emptyObj
+
+\end{code}}
+
+\newcommand{\parallelReflProof}{%
+\begin{code}
 
   reductToSelfProof : ∀ {L Γ}
     {N : (L ⊎ Phi) → ((L ∣ (Γ ,, ★) ⊢ ★) ⊎ None ⊎ ∅)}
@@ -775,6 +838,11 @@ interleaved mutual
     → (reductToSelfMap N) attr ≡ t
   reductToSelfReflLemma {L} {Γ} {N} attr t eq rewrite eq = _≡_.refl
 
+\end{code}}
+
+\newcommand{\parallelReflLemma}{%
+\begin{code}
+
   parallelReductOnSelfReflexivity : ∀ {L Γ N}
     → (parallelReductN {L} {Γ} N (reductToSelfMap N)) ≡ N
   parallelReductOnSelfReflexivity {L} {Γ} {N} =
@@ -785,6 +853,11 @@ interleaved mutual
       ... | (inj₁ t) rewrite reductToSelfReflLemma {L} {Γ} {N} c t eq =
         _≡_.refl
       ... | (inj₂ v) = _≡_.refl
+
+\end{code}}
+
+\newcommand{\simultaneousSubstitution}{%
+\begin{code}
 
   ⇛-reflexive (` x₁) = cong⇛P
   ⇛-reflexive (t ∙ c) = cong⇛DOT (⇛-reflexive t)
@@ -800,6 +873,11 @@ interleaved mutual
         {L} {Γ}
         {parallelReductN {L} {Γ} N (reductToSelfMap N)}
         {N} (parallelReductOnSelfReflexivity))
+
+\end{code}}
+
+\newcommand{\parallelFromSingleMap}{%
+\begin{code}
 
 interleaved mutual
 
@@ -819,6 +897,11 @@ interleaved mutual
   ... | no _ with N attr
   ...   | (inj₁ term) = term
   ...   | (inj₂ v) = emptyObj
+
+\end{code}}
+
+\newcommand{\parallelFromSingleMapLemmas}{%
+\begin{code}
 
   parallelFromSingleMapC≡t' : ∀ {L Γ}
     {comp : (a : L ⊎ Phi) → (b : L ⊎ Phi) → Dec (a ≡ b)}
@@ -849,6 +932,11 @@ interleaved mutual
   ... | yes p = ⊥-elim (notP p)
   ... | no _ rewrite eq = _≡_.refl
 
+\end{code}}
+
+\newcommand{\parallelFromSingleProof}{%
+\begin{code}
+
   parallelFromSingleProof : ∀ {L Γ}
     {comp : (a : L ⊎ Phi) → (b : L ⊎ Phi) → Dec (a ≡ b)}
     → (N : (L ⊎ Phi) → ((L ∣ (Γ ,, ★) ⊢ ★) ⊎ None ⊎ ∅))
@@ -866,6 +954,11 @@ interleaved mutual
       | no _ with N attr
   ...   | (inj₁ term) = ⇛-reflexive term
   ...   | (inj₂ v) = tt
+
+\end{code}}
+
+\newcommand{\singleParallelEqualityLemmas}{%
+\begin{code}
 
   singleParallelTransitionEqualityAttr : ∀ {L Γ}
     {comp : (a : L ⊎ Phi) → (b : L ⊎ Phi) → Dec (a ≡ b)}
@@ -913,6 +1006,11 @@ interleaved mutual
       (singleReductN {L} {Γ} {t} {t'} {comp} c N e red)
       (singleParallelTransitionEqualityAttr {L} {Γ} {comp} N c t t' e red))
 
+\end{code}}
+
+\newcommand{\singleReductionImpliesParallel}{%
+\begin{code}
+
   singleReductionImpliesParallel {L} {Γ} {★} {t} {t'} red with red
   ... | DOT {L} {Γ} {c} {N} {t_c} {t} {e1} {e2} =
     DOT⇛ {L} {Γ} {c} {N} {t_c} {t} {t} {e1} {e2} (⇛-reflexive t)
@@ -932,5 +1030,31 @@ interleaved mutual
         (parallelFromSingleMap {L} {Γ} {comp} N c t_c t'' e2 r)
         (parallelFromSingleProof {L} {Γ} {comp} N c t_c t'' e2 r))
       (singleParallelTransitionEquality {L} {Γ} {comp} N c t_c t'' e2 r)
+
+
+\end{code}}
+
+\newcommand{\singleReductionsImpliesParallels}{%
+\begin{code}
+
+singleReductionsImpliesParallels : ∀{L Γ A} {M N : L ∣ Γ ⊢ A}
+  → M ⟿* N
+    ------
+  → M ⇛* N
+singleReductionsImpliesParallels {L} {Γ} {A} {M} {.M} (M ∎) = M ∎
+singleReductionsImpliesParallels {L} {Γ} {A} {.K} {N} (K ⟿⟨ b ⟩ bs) =
+  K ⇛⟨ singleReductionImpliesParallel b ⟩ singleReductionsImpliesParallels bs
+
+
+\end{code}}
+
+\newcommand{\remainingImpl}{%
+\begin{code}
+
+-- paralellReductionImpliesSingles : ∀ {L Γ A}
+--     {t t' : L ∣ Γ ⊢ A} → t ⇛ t' → t ⟿* t'
+-- paralellReductionImpliesSingles {L} {Γ} {★} {t} {t'} parRed with parRed
+-- ... | cong⇛P {L} {Γ} {A} {p} = (` p) ∎
+-- ... | cong⇛DOT {L} {Γ} {c} {_} {_} r = ?
 
 \end{code}}         
