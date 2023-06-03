@@ -669,18 +669,27 @@ interleaved mutual
 
   data _⇛_ : ∀ {L Γ A} → (L ∣ Γ ⊢ A) → (L ∣ Γ ⊢ A) → Set
 
-  reductionMapsType : ∀ {L Γ} → (N : (L ⊎ Phi) → ((L ∣ (Γ ,, ★) ⊢ ★) ⊎ None ⊎ ∅)) → (c : (L ⊎ Phi)) → Set
-  reductionMapsType {L} {Γ} N attr with (N attr)
-  ... | (inj₁ t) = Σ (L ∣ (Γ ,, ★) ⊢ ★) (_⇛_ t)
+  reductionMapsProof : ∀ {L Γ} → (N_attr : ((L ∣ (Γ ,, ★) ⊢ ★) ⊎ None ⊎ ∅)) 
+    → (t' : (L ∣ Γ ,, ★ ⊢ ★)) → Set
+  reductionMapsProof {L} {Γ} N_attr t' with (N_attr)
+  ... | (inj₁ t) = t ⇛ t'
   ... | (inj₂ v) = ⊤
 
   parallelReductN : ∀ {L Γ}
     → (N : (L ⊎ Phi) → ((L ∣ (Γ ,, ★) ⊢ ★) ⊎ None ⊎ ∅))
-    → (reductions : (attr : L ⊎ Phi) → reductionMapsType N attr)
+    → (reductionMaps : (attr : L ⊎ Phi) → (L ∣ (Γ ,, ★) ⊢ ★))
     → ((L ⊎ Phi) → ((L ∣ (Γ ,, ★) ⊢ ★) ⊎ None ⊎ ∅))
-  parallelReductN {L} {Γ} N reductions c with N c | reductions c
-  ... | (inj₁ t) | r = inj₁ (fst r)
-  ... | (inj₂ v) | _ = inj₂ v
+  parallelReductN {L} {Γ} N reductionMaps c with N c
+  ... | (inj₁ t) = inj₁ (reductionMaps c)
+  ... | (inj₂ v) = inj₂ v
+
+  decomposeParallelReductLemma : ∀ {L Γ c t}
+    {N : (L ⊎ Phi) → ((L ∣ (Γ ,, ★) ⊢ ★) ⊎ None ⊎ ∅)}
+    {reductionMaps : (attr : L ⊎ Phi) → (L ∣ (Γ ,, ★) ⊢ ★)}
+    → (e : N c ≡ inj₁ t)
+    → (parallelReductN N reductionMaps) c ≡  inj₁ (reductionMaps c)
+  decomposeParallelReductLemma
+    {L} {Γ} {c} {t} {N} {reductionMaps} e rewrite e = _≡_.refl
 
   data _⇛_ where
 
@@ -726,31 +735,56 @@ interleaved mutual
         -----------------------
       → t [ c ↦ u ] ⇛ (makeObject (apply N c (rename S_ u) comp))
     
-    congOBJ⇛ : ∀ {L Γ N}
+    cong⇛OBJ : ∀ {L Γ N}
       {t : L ∣ Γ ⊢ ★}
       {_ : t ≡ makeObject N}
-      → (reductions : (attr : L ⊎ Phi) → reductionMapsType N attr)
+      → (reductionMaps : (L ⊎ Phi) → (L ∣ Γ ,, ★ ⊢ ★))
+      → (reductionProofs :
+        (attr : L ⊎ Phi) → reductionMapsProof (N attr) (reductionMaps attr))
       -----------------------------
-      → t ⇛ makeObject (parallelReductN N reductions)
+      → t ⇛ makeObject (parallelReductN N reductionMaps)
 
-⇛FromEqualityLemma : ∀ {L Γ} {N M M′ : L ∣ Γ ⊢ ★} → (N ⇛ M) → (M ≡ M′) → (N ⇛ M′)
+⇛FromEqualityLemma :
+  ∀ {L Γ} {N M M′ : L ∣ Γ ⊢ ★} → (N ⇛ M) → (M ≡ M′) → (N ⇛ M′)
 ⇛FromEqualityLemma a e rewrite e = a
 
 interleaved mutual
 
   ⇛-reflexive : ∀ {L Γ A} → (t : L ∣ Γ ⊢ A) → t ⇛ t
 
-  reductToSelf : ∀ {L Γ} → (N : (L ⊎ Phi) → ((L ∣ (Γ ,, ★) ⊢ ★) ⊎ None ⊎ ∅)) → (attr : L ⊎ Phi) → reductionMapsType {L} {Γ} N attr
-  reductToSelf N c with N c
-  ... | (inj₁ t) = t , (⇛-reflexive t)
-  ... | (inj₂ _) = tt
+  reductToSelfMap : ∀ {L Γ}
+    → (N : (L ⊎ Phi)→ ((L ∣ (Γ ,, ★) ⊢ ★) ⊎ None ⊎ ∅))
+    → ((attr : L ⊎ Phi) → (L ∣ Γ ,, ★ ⊢ ★))
+  reductToSelfMap N c with N c
+  ... | (inj₁ t) = t
+  ... | (inj₂ _) = emptyObj
 
-  parallelReductOnSelfReflexivity : ∀ {L Γ N} → (parallelReductN {L} {Γ} N (reductToSelf N)) ≡ N
-  parallelReductOnSelfReflexivity {L} {Γ} {N} = φ-extensionality (parallelReductN N (reductToSelf N)) N eqC where
-    eqC : (c : L ⊎ Phi) → ((parallelReductN N (reductToSelf N)) c ≡ N c)
-    eqC c with N c
-    ... | (inj₁ t) = _≡_.refl
-    ... | (inj₂ _) = _≡_.refl
+  reductToSelfProof : ∀ {L Γ}
+    {N : (L ⊎ Phi) → ((L ∣ (Γ ,, ★) ⊢ ★) ⊎ None ⊎ ∅)}
+    → (attr : L ⊎ Phi)
+    → reductionMapsProof (N attr) ((reductToSelfMap N) attr)
+  reductToSelfProof {L} {Γ} {N} attr with N attr
+  ... | (inj₁ t) = ⇛-reflexive t
+  ... | (inj₂ v) = tt 
+
+  reductToSelfReflLemma : ∀ {L Γ}
+    {N : (L ⊎ Phi) → ((L ∣ (Γ ,, ★) ⊢ ★) ⊎ None ⊎ ∅)}
+    → (attr : L ⊎ Phi)
+    → (t : L ∣ (Γ ,, ★) ⊢ ★)
+    → (eq : N attr ≡ inj₁ t)
+    → (reductToSelfMap N) attr ≡ t
+  reductToSelfReflLemma {L} {Γ} {N} attr t eq rewrite eq = _≡_.refl
+
+  parallelReductOnSelfReflexivity : ∀ {L Γ N}
+    → (parallelReductN {L} {Γ} N (reductToSelfMap N)) ≡ N
+  parallelReductOnSelfReflexivity {L} {Γ} {N} =
+    φ-extensionality (parallelReductN N (reductToSelfMap N)) N eqC where
+      eqC : (c : L ⊎ Phi)
+        → ((parallelReductN N (reductToSelfMap N)) c ≡ N c)
+      eqC c with N c in eq
+      ... | (inj₁ t) rewrite reductToSelfReflLemma {L} {Γ} {N} c t eq =
+        _≡_.refl
+      ... | (inj₂ v) = _≡_.refl
 
   ⇛-reflexive (` x₁) = cong⇛P
   ⇛-reflexive (t ∙ c) = cong⇛DOT (⇛-reflexive t)
@@ -758,109 +792,145 @@ interleaved mutual
   ⇛-reflexive {L} {Γ} {★} (makeObject N) = 
     ⇛FromEqualityLemma {L} {Γ}
       {makeObject N}
-      {makeObject (parallelReductN {L} {Γ} N (reductToSelf N))}
+      {makeObject (parallelReductN {L} {Γ} N (reductToSelfMap N))}
       {makeObject N}
-      (congOBJ⇛ {L} {Γ} {N} {_} {_≡_.refl} (reductToSelf N))
-      (makeObjectEqualityLemma {L} {Γ} {parallelReductN {L} {Γ} N (reductToSelf N)} {N} (parallelReductOnSelfReflexivity))
+      (cong⇛OBJ {L} {Γ} {N} {_} {_≡_.refl}
+        (reductToSelfMap N) (reductToSelfProof))
+      (makeObjectEqualityLemma
+        {L} {Γ}
+        {parallelReductN {L} {Γ} N (reductToSelfMap N)}
+        {N} (parallelReductOnSelfReflexivity))
 
--- interleaved mutual
+interleaved mutual
 
-  -- singleReductionImpliesParallel : ∀ {L Γ A} {t t' : L ∣ Γ ⊢ A} → t ⟿ t' → t ⇛ t'
+  singleReductionImpliesParallel : ∀ {L Γ A}
+    {t t' : L ∣ Γ ⊢ A} → t ⟿ t' → t ⇛ t'
 
-  -- parallelObjRedFromSingle : ∀ {L Γ} {comp : (a : L ⊎ Phi) → (b : L ⊎ Phi) → Dec (a ≡ b)}
-  --   → (N : (L ⊎ Phi) → ((L ∣ (Γ ,, ★) ⊢ ★) ⊎ None ⊎ ∅)) 
-  --   → (c_label : L ⊎ Phi) 
-  --   → (t t' : L ∣ Γ ,, ★ ⊢ ★) 
-  --   → (e : (N c_label) ≡ (inj₁ t)) 
-  --   → (red : t ⟿ t') 
-  --   → ((attr : L ⊎ Phi) → reductionMapsType N attr)
-  -- parallelObjRedFromSingle {L} {Γ} {comp} N c_label t t' e red attr with (comp attr c_label)
-  -- ... | yes e_attr_с with attr | e_attr_с
-  -- ...   | c | _≡_.refl with N c
-  -- ...     | (inj₁ t_c) with t_c | e
-  -- ...       | t | _≡_.refl = t' , (singleReductionImpliesParallel red)
-  -- parallelObjRedFromSingle {L} {Γ} {comp} N c_label t t' e red attr
-  --     | no _ with N attr
-  -- ...   | inj₁ t_attr = t_attr , (⇛-reflexive t_attr)
-  -- ...   | inj₂ v = tt
+  parallelFromSingleMap : ∀ {L Γ}
+    {comp : (a : L ⊎ Phi) → (b : L ⊎ Phi) → Dec (a ≡ b)}
+    → (N : (L ⊎ Phi) → ((L ∣ (Γ ,, ★) ⊢ ★) ⊎ None ⊎ ∅)) 
+    → (c : L ⊎ Phi) 
+    → (t t' : L ∣ Γ ,, ★ ⊢ ★) 
+    → (e : (N c) ≡ (inj₁ t)) 
+    → (red : t ⟿ t') 
+    → ((attr : L ⊎ Phi) → (L ∣ Γ ,, ★ ⊢ ★))
+  parallelFromSingleMap {L} {Γ} {comp} N c t t' e red attr with comp attr c
+  ... | yes _ = t'
+  ... | no _ with N attr
+  ...   | (inj₁ term) = term
+  ...   | (inj₂ v) = emptyObj
 
-  -- pseudoParRedEqSingleC : ∀ {L Γ c}
-  --   {N : (L ⊎ Phi) → ((L ∣ (Γ ,, ★) ⊢ ★) ⊎ None ⊎ ∅)}
-  --   {t_c t'' : L ∣ (Γ ,, ★) ⊢ ★}
-  --   {e : N c ≡ (inj₁ t_c)}
-  --   {red : t_c ⟿ t''}
-  --   {comp : (a : L ⊎ Phi) → (b : L ⊎ Phi) → Dec (a ≡ b)}
-  --   → (((parallelReductN N (parallelObjRedFromSingle {L} {Γ} {comp} N c t_c t'' e red)) c)
-  --     ≡ ((singleReductN {L} {Γ} {t_c} {t''} {comp} c N e red) c))
-  -- pseudoParRedEqSingleC  {L} {Γ} {c} {N} {t_c} {t''} {e} {red} {comp} with N c | (parallelObjRedFromSingle {L} {Γ} {comp} N c t_c t'' e red) c
-  -- -- ... | t1 , _ | inj₁ t2 = ?
-  -- ... | inj₁ t1 | t2 , _ with comp c c
-  -- ...   | yes e_c_c with c | e_c_c
-  -- ...     | c | _≡_.refl with N c | e
-  -- ...       | (inj₁ t3) | _≡_.refl = _≡_.refl
-  -- ... | inj₁ t1 | t2 , _ with t1 | e
-  -- ...   | t3 | _≡_.refl = ?
-  -- ...   | yes e_c_c with N c | e
-  -- ...     | (inj₁ t) | _≡_.refl = {!   !}
+  parallelFromSingleMapC≡t' : ∀ {L Γ}
+    {comp : (a : L ⊎ Phi) → (b : L ⊎ Phi) → Dec (a ≡ b)}
+    → (N : (L ⊎ Phi) → ((L ∣ (Γ ,, ★) ⊢ ★) ⊎ None ⊎ ∅)) 
+    → (c : L ⊎ Phi) 
+    → (t t' : L ∣ Γ ,, ★ ⊢ ★) 
+    → (e : (N c) ≡ (inj₁ t)) 
+    → (red : t ⟿ t') 
+    → (parallelFromSingleMap {L} {Γ} {comp} N c t t' e red) c ≡ t'
+  parallelFromSingleMapC≡t' {L} {Γ} {comp} N c t t' e red with comp c c
+  ... | yes _ = _≡_.refl
+  ... | no p = ⊥-elim (p _≡_.refl)
 
+  paralellFromSingleMapNotC≡term : ∀ {L Γ}
+    {comp : (a : L ⊎ Phi) → (b : L ⊎ Phi) → Dec (a ≡ b)}
+    → (N : (L ⊎ Phi) → ((L ∣ (Γ ,, ★) ⊢ ★) ⊎ None ⊎ ∅)) 
+    → (c : L ⊎ Phi) 
+    → (t t' : L ∣ Γ ,, ★ ⊢ ★) 
+    → (e : (N c) ≡ (inj₁ t)) 
+    → (red : t ⟿ t')
+    → (attr : L ⊎ Phi)
+    → (notP : attr ≡ c → ⊥)
+    → (term : L ∣ Γ ,, ★ ⊢ ★)
+    → (eq : N attr ≡ inj₁ term)
+    → (parallelFromSingleMap {L} {Γ} {comp} N c t t' e red) attr ≡ term
+  paralellFromSingleMapNotC≡term {L} {Γ} {comp}
+    N c t t' e red attr notP term eq with comp attr c
+  ... | yes p = ⊥-elim (notP p)
+  ... | no _ rewrite eq = _≡_.refl
 
-  -- pseudoParRedEqSingleAttr : ∀ {L Γ c} {N : (L ⊎ Phi) → ((L ∣ (Γ ,, ★) ⊢ ★) ⊎ None ⊎ ∅)} {t_c t'' : L ∣ (Γ ,, ★) ⊢ ★} {e : N c ≡ (inj₁ t_c)} {red : t_c ⟿ t''} {comp : (a : L ⊎ Phi) → (b : L ⊎ Phi) → Dec (a ≡ b)} (attr : L ⊎ Phi) → (((parallelReductN N (parallelObjRedFromSingle {L} {Γ} {comp} N c t_c t'' e red)) attr) ≡ ((singleReductN {L} {Γ} {t_c} {t''} {comp} c N e red) attr))
-  -- pseudoParRedEqSingleAttr {L} {Γ} {c} {N} {t_c} {t''} {e} {red} {comp} attr with (comp attr c)
+  parallelFromSingleProof : ∀ {L Γ}
+    {comp : (a : L ⊎ Phi) → (b : L ⊎ Phi) → Dec (a ≡ b)}
+    → (N : (L ⊎ Phi) → ((L ∣ (Γ ,, ★) ⊢ ★) ⊎ None ⊎ ∅))
+    → (c : L ⊎ Phi) 
+    → (t t' : L ∣ Γ ,, ★ ⊢ ★) 
+    → (e : (N c) ≡ (inj₁ t)) 
+    → (red : t ⟿ t') 
+    → (attr : L ⊎ Phi)
+    → reductionMapsProof
+      (N attr) (parallelFromSingleMap {L} {Γ} {comp} N c t t' e red attr)
+  parallelFromSingleProof {L} {Γ} {comp} N c t t' e red attr with comp attr c
+  ... | yes e_attr_c rewrite e_attr_c | e =
+    singleReductionImpliesParallel {L} {Γ ,, ★} {★} {t} {t'} red
+  parallelFromSingleProof {L} {Γ} {comp} N c t t' e red attr
+      | no _ with N attr
+  ...   | (inj₁ term) = ⇛-reflexive term
+  ...   | (inj₂ v) = tt
 
-  -- pseudoParRedEqSingleAttr {L} {Γ} {c} {N} {t_c} {t''} {e} {red} {comp} attr = {!   !}
-  -- ... | (Σ (L ∣ (Γ ,, ★) ⊢ ★) (_⇛_ t)) = {!   !}
+  singleParallelTransitionEqualityAttr : ∀ {L Γ}
+    {comp : (a : L ⊎ Phi) → (b : L ⊎ Phi) → Dec (a ≡ b)}
+    → (N : (L ⊎ Phi) → ((L ∣ (Γ ,, ★) ⊢ ★) ⊎ None ⊎ ∅))
+    → (c : L ⊎ Phi) 
+    → (t t' : L ∣ Γ ,, ★ ⊢ ★) 
+    → (e : (N c) ≡ (inj₁ t)) 
+    → (red : t ⟿ t') 
+    → (attr : L ⊎ Phi)
+    → (parallelReductN
+      N (parallelFromSingleMap {L} {Γ} {comp} N c t t' e red)) attr
+      ≡ (singleReductN {L} {Γ} {t} {t'} {comp} c N e red) attr
+  singleParallelTransitionEqualityAttr
+    {L} {Γ} {comp} N c t t' e red attr with comp attr c
+  ... | yes e_attr_c with attr | e_attr_c
+  ...   | .c | _≡_.refl rewrite
+    (decomposeParallelReductLemma
+      {L} {Γ} {c} {t} {N}
+      {(parallelFromSingleMap {L} {Γ} {comp} N c t t' e red)} e)
+    | (parallelFromSingleMapC≡t' {L} {Γ} {comp} N c t t' e red) = _≡_.refl
+  singleParallelTransitionEqualityAttr {L} {Γ} {comp} N c t t' e red attr
+      | no notP with N attr in eq
+  ...   | (inj₁ term) rewrite
+    (decomposeParallelReductLemma
+      {L} {Γ} {attr} {term} {N}
+      {(parallelFromSingleMap {L} {Γ} {comp} N c t t' e red)} eq)
+    | (paralellFromSingleMapNotC≡term
+      {L} {Γ} {comp} N c t t' e red attr notP term eq) = _≡_.refl
+  ...   | (inj₂ v) = _≡_.refl
 
+  singleParallelTransitionEquality : ∀ {L Γ}
+    {comp : (a : L ⊎ Phi) → (b : L ⊎ Phi) → Dec (a ≡ b)}
+    → (N : (L ⊎ Phi) → ((L ∣ (Γ ,, ★) ⊢ ★) ⊎ None ⊎ ∅))
+    → (c : L ⊎ Phi) 
+    → (t t' : L ∣ Γ ,, ★ ⊢ ★) 
+    → (e : (N c) ≡ (inj₁ t)) 
+    → (red : t ⟿ t') 
+    → makeObject (parallelReductN N
+      (parallelFromSingleMap {L} {Γ} {comp} N c t t' e red))
+      ≡ makeObject (singleReductN {L} {Γ} {t} {t'} {comp} c N e red)
+  singleParallelTransitionEquality {L} {Γ} {comp} N c t t' e red =
+    makeObjectEqualityLemma (φ-extensionality
+      (parallelReductN N
+        (parallelFromSingleMap {L} {Γ} {comp} N c t t' e red))
+      (singleReductN {L} {Γ} {t} {t'} {comp} c N e red)
+      (singleParallelTransitionEqualityAttr {L} {Γ} {comp} N c t t' e red))
 
+  singleReductionImpliesParallel {L} {Γ} {★} {t} {t'} red with red
+  ... | DOT {L} {Γ} {c} {N} {t_c} {t} {e1} {e2} =
+    DOT⇛ {L} {Γ} {c} {N} {t_c} {t} {t} {e1} {e2} (⇛-reflexive t)
+  ... | congDOT {L} {Γ} {_} {_} {l} r =
+    cong⇛DOT (singleReductionImpliesParallel r)
+  ... | congAPP₁ {L} {Γ} {_} {_} {M} r =
+    cong⇛APP (singleReductionImpliesParallel r) (⇛-reflexive M)
+  ... | congAPP₂ {L} {Γ} {N} {_} {_} r =
+    cong⇛APP (⇛-reflexive N) (singleReductionImpliesParallel r)
+  ... | DOTφ {L} {Γ} {c} {N} {t_φ} {t} {e1} {e2} {e3} =
+    DOT⇛φ {L} {Γ} {c} {N} {t_φ} {t} {t} {e1} {e2} {e3} (⇛-reflexive t)
+  ... | APP {L} {Γ} {c} {N} {t'} {e1} {e2} {u} comp =
+    APP⇛ {L} {Γ} {c} {N} {t'} {t'} {e1} {e2} {u} {comp} (⇛-reflexive t')
+  ... | congOBJ {L} {Γ} {c} {N} {t_c} {t} {t''} {e1} {e2} {comp} r =
+    ⇛FromEqualityLemma {L} {Γ} {_} {_} {_}
+      (cong⇛OBJ {L} {Γ} {N} {t} {e1}
+        (parallelFromSingleMap {L} {Γ} {comp} N c t_c t'' e2 r)
+        (parallelFromSingleProof {L} {Γ} {comp} N c t_c t'' e2 r))
+      (singleParallelTransitionEquality {L} {Γ} {comp} N c t_c t'' e2 r)
 
-  -- pseudoParRedEqSingleAttr {L} {Γ} {c} {N} {t_c} {t''} {e} {red} {comp} attr with (comp attr c) | N attr | (parallelObjRedFromSingle {L} {Γ} {comp} N c t_c t'' e red) attr
-  -- ... | yes e_attr_c | (inj₁ t1) | t2 , _ with attr | e_attr_c
-  -- ...   | c_label | _≡_.refl with N c_label | (parallelObjRedFromSingle {L} {Γ} {comp} N c t_c t'' e red) c_label | e
-  -- ...     | (inj₁ t3) | t4 , _ | _≡_.refl = {!   !}
-
-
-  -- ...     | (inj₁ t3) with t3 | e
-  -- ...       | t4 | _≡_.refl with (parallelObjRedFromSingle {L} {Γ} {comp} N c t_c t'' e red) c_label
-  -- ...         | t5 , _ = ?
-  -- ...   | yes e_attr_c with attr | e_attr_c
-  -- ...     | c | _≡_.refl = {!   !}
-  -- ... | yes e_attr_c with attr | e_attr_c
-  -- ...   | c | _≡_.refl with (parallelObjRedFromSingle {L} {Γ} {comp} N c t_c t'' e red) c | (parallelReductN N (parallelObjRedFromSingle {L} {Γ} {comp} N c t_c t'' e red)) c
-  -- ...     | something | something2 with N c | e | something | something2
-  -- ...       | _ | _ | _ | _ = {!   !}
-
-  -- pseudoParRedEqSingle : ∀ {L Γ c} {N : (L ⊎ Phi) → ((L ∣ (Γ ,, ★) ⊢ ★) ⊎ None ⊎ ∅)} {t_c t'' : L ∣ (Γ ,, ★) ⊢ ★} {e : N c ≡ (inj₁ t_c)} {red : t_c ⟿ t''} {comp : (a : L ⊎ Phi) → (b : L ⊎ Phi) → Dec (a ≡ b)} → (parallelReductN N (parallelObjRedFromSingle {L} {Γ} {comp} N c t_c t'' e red)) ≡ (singleReductN {L} {Γ} {t_c} {t''} {comp} c N e red)
-  -- pseudoParRedEqSingle {L} {Γ} {c} {N} {t_c} {t''} {e} {red} {comp} = φ-extensionality (parallelReductN N (parallelObjRedFromSingle {L} {Γ} {comp} N c t_c t'' e red)) (singleReductN {L} {Γ} {t_c} {t''} {comp} c N e red) pseudoParRedEqSingleAttr -- where
-    -- eqAttr : (attr : L ⊎ Phi) → (((parallelReductN N (parallelObjRedFromSingle {L} {Γ} {comp} N c t_c t'' e red)) attr) ≡ ((singleReductN {L} {Γ} {t_c} {t''} {comp} c N e red) attr))
-    -- eqAttr attr with (comp attr c)
-    -- eqAttr attr with (comp attr c) | N attr | (parallelObjRedFromSingle {L} {Γ} {comp} N c t_c t'' e red) attr | (parallelReductN N (parallelObjRedFromSingle {L} {Γ} {comp} N c t_c t'' e red)) attr
-    -- ... | yes e_attr_c | (inj₁ t_c) | (t , _) | (inj₁ t1) with attr | e_attr_c
-    -- ...   | c_label | _≡_.refl with N c_label | e
-    -- ...     | something1 | _≡_.refl = ?
-    -- ... | yes e_attr_c with attr | e_attr_c
-    -- ...   | c_label | _≡_.refl with N c_label
-    -- ...     | something = ?
-    -- ...   | c_label | _≡_.refl with (parallelReductN N (parallelObjRedFromSingle {L} {Γ} {comp} N c t_c t'' e red)) c_label | (parallelObjRedFromSingle {L} {Γ} {comp} N c t_c t'' e red) c_label
-    -- ...     | something1 | something2 = {!   !}
-    -- ...     | (inj₁ t) with (singleReductN {L} {Γ} {t_c} {t''} {comp} c N e red) c_label
-    -- ...       | (inj₁ t1) = _≡_.refl
-    -- ...   | c | _≡_.refl with (parallelReductN N (parallelObjRedFromSingle {L} {Γ} {comp} N c t_c t'' e red)) c
-    -- ...     | (inj₁ t) = {!   !}
-
-  -- singleReductionImpliesParallel {L} {Γ} {★} {t} {t'} red with red
-  -- ... | DOT {L} {Γ} {c} {N} {t_c} {t} {e1} {e2} = DOT⇛ {L} {Γ} {c} {N} {t_c} {t} {t} {e1} {e2} (⇛-reflexive t)
-  -- ... | congDOT {L} {Γ} {_} {_} {l} r = cong⇛DOT (singleReductionImpliesParallel r)
-  -- ... | congAPP₁ {L} {Γ} {_} {_} {M} r = cong⇛APP (singleReductionImpliesParallel r) (⇛-reflexive M)
-  -- ... | congAPP₂ {L} {Γ} {N} {_} {_} r = cong⇛APP (⇛-reflexive N) (singleReductionImpliesParallel r)
-  -- ... | DOTφ {L} {Γ} {c} {N} {t_φ} {t} {e1} {e2} {e3} = DOT⇛φ {L} {Γ} {c} {N} {t_φ} {t} {t} {e1} {e2} {e3} (⇛-reflexive t)
-  -- ... | APP {L} {Γ} {c} {N} {t'} {e1} {e2} {u} comp = APP⇛ {L} {Γ} {c} {N} {t'} {t'} {e1} {e2} {u} {comp} (⇛-reflexive t')
-  -- ... | congOBJ {L} {Γ} {c} {N} {t_c} {t} {t''} {e1} {e2} {comp} r = {!   !}
-
-  -- singleReductionImpliesParallel {L} {Γ} {★} {makeObject N} {t'} (congOBJ {L} {Γ} {c} {_} {t_c} {t} {t''} {_} {_} {comp} red) = congOBJ⇛ {L} {Γ} {N} {makeObject N} {_≡_.refl} (parallelObjRedFromSingle {L} {Γ} {comp} N c t_c t'' _ red)
-  -- singleReductionImpliesParallel {L} {Γ} {★} {t ∙ (inj₁ l)} {t' ∙ (inj₁ l)} (congDOT {L} {Γ} {t} {t'} {l} red) = cong⇛DOT (singleReductionImpliesParallel red)
-  -- singleReductionImpliesParallel {L} {Γ} {★} {N [ l ↦ M ]} {N' [ l ↦ M ]} (congAPP₁ {L} {Γ} {N} {N'} {M} red) = cong⇛APP (singleReductionImpliesParallel red) (⇛-reflexive M)
-  -- singleReductionImpliesParallel {L} {Γ} {★} {N [ l ↦ M ]} {N [ l ↦ M' ]} (congAPP₂ red) = cong⇛APP (⇛-reflexive N) (singleReductionImpliesParallel red)
-  -- singleReductionImpliesParallel {L} {Γ} {★} { t ∙ c } {_} (DOT {_} {_} {c} {N} {t_c} {t} {e1} {e2}) = DOT⇛ (⇛-reflexive t)
-  -- singleReductionImpliesParallel {L} {Γ} {★} {t ∙ (inj₁ c)} {t ∙ (inj₂ φ) ∙ (inj₁ c)} (DOTφ {L} {Γ} {c} {N} {t_φ} {t} {e1} {e2} {e3}) = DOT⇛φ {L} {Γ} {c} {N} {t_φ} {t} {t} {e1} {e2} {e3} (⇛-reflexive t)
-  -- singleReductionImpliesParallel {L} {Γ} {★} {t [ c ↦ u ]} {(makeObject (apply N c (rename S_ u) comp))} (APP comp) = ?
-
-\end{code}}     
+\end{code}}         
